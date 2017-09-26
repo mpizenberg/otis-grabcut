@@ -1,0 +1,3 @@
+[submodule "GCMex"]
+	path = GCMex
+	url = https://github.com/shaibagon/GCMex.git
