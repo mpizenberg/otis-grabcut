@@ -1,4 +1,6 @@
-% Copyright (C) 2012  Itay Blumenthal
+% GrabCut
+% Original work Copyright (C) 2012  Itay Blumenthal
+% Modified work Copyright (C) 2017  Axel Carlier, Matthieu Pizenberg
 %
 % This program is free software; you can redistribute it and/or modify
 % it under the terms of the GNU General Public License as published by
@@ -15,11 +17,20 @@
 % Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 
-function finalLabel = GCAlgo( im, fixedBG,  K, G, maxIterations, Beta, diffThreshold, myHandle )
+function [finalLabel, nbIter] = GCAlgo( im, fixedBG, fixedFG, K, G, maxIterations, Beta, diffThreshold, myHandle, constraint )
+
+if nargin < 10
+	constraint = 'soft';
+end
 
 %%%%%%%%%%%%%%%%%%%%%
 %%% Get definite labels defining absolute Background :
 prevLabel = double(fixedBG);
+%%% A. Carlier modification: add absolute foreground
+if ~isempty(fixedFG)
+	prevLabel(~fixedBG) = 0.5;
+	prevLabel(fixedFG) = 0;
+end
 
 %%%%%%%%%%%%%%%%%%%%%
 %%% Calculate the smoothness term defined by the entire image's RGB values
@@ -51,7 +62,7 @@ sc = [0 G;G 0];
 bgMean = [];
 fgMean = [];
 for iter=1:maxIterations
-	iter;
+	% disp(['Iteration #' int2str(iter)]);
 	if ~isempty(myHandle)
 		set(myHandle,'String',strcat(num2str(100* iter/maxIterations),' %'  ));
 		pause(0.2);
@@ -68,6 +79,10 @@ for iter=1:maxIterations
 	%%% Use our A-Priori knowledge of Background labels & set the Forground
 	%%% weights according to it.
 	fgLogPL(fixedBG) = max(max(fgLogPL));
+	%%% A. Carlier modification: do the same for Foreground labels and Background weights
+	if ~isempty(fixedFG) && strcmp(constraint, 'hard')
+		bgLogPL(fixedFG) = max(max(bgLogPL));
+	end
 
 	%%% Now that we have all inputs, calculate the min-cut of the graph
 	%%% using Bagon's code. Not much to explain here, for more details read
@@ -88,6 +103,8 @@ for iter=1:maxIterations
 
 end
 finalLabel = currLabel;
+
+nbIter = iter;
 
 function [ bgLogPL fgLogPL bgMean fgMean ] = CalcLogPLikelihood(im, K, bgIds,fgIds , bgMeanInit, fgMeanInit )
 
@@ -115,6 +132,8 @@ numFGValues = size(fgValues,1);
 opts = statset('kmeans');
 opts.MaxIter = 40;
 
+% Temporarily deactivate warnings (failed to converge warning)
+w = warning( 'off', 'all' );
 if ( ~isempty(bgMeanInit) && ~isempty(fgMeanInit) )
 	[bgClusterIds bgMean] = kmeans(bgValues, K, 'start', bgMeanInit,  'emptyaction','singleton' ,'Options',opts);
 	[fgClusterIds fgMean] = kmeans(fgValues, K, 'start', fgMeanInit,  'emptyaction','singleton', 'Options',opts);
@@ -122,6 +141,8 @@ else
 	[bgClusterIds bgMean] = kmeans(bgValues, K, 'emptyaction','singleton' ,'Options',opts);
 	[fgClusterIds fgMean] = kmeans(fgValues, K, 'emptyaction','singleton', 'Options',opts);
 end
+% Reactivate warnings
+warning(w);
 
 checkSumFG = 0;
 checkSumBG = 0;
