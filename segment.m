@@ -4,14 +4,16 @@ function [ segmentation, nb_iter ] = segment( img, bg_constraint, fg_constraint,
 %
 % Syntax #####################
 %
-% [ segmentation, nb_iter ] = segment( img, fg_constraint, bg_constraint, opts );
+% [ segmentation, nb_iter ] = segment( img, bg_constraint, fg_constraint, opts );
 %
 % Description ################
 %
 % img: m x n x 3 array. RGB color image.
-% fg_constraint: { type: String, mask: m * n logical array }
+% bg_constraint: { type: String, mask: m * n logical array }
 %     type = 'none' | 'soft' | 'hard'
-% bg_constraint: same as fg_constraint.
+%     A soft constraint applies only at initialization, whereas a hard constraint
+%     is reapplied at each iteration, and at the end of the algorithm.
+% fg_constraint: same as bg_constraint.
 % opts: { nb_classes: int, max_nb_iter: int, diff_thresh: float, jump_cost: float, beta: float }
 
 
